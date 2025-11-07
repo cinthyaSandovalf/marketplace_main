@@ -12,3 +12,14 @@ def home(request):
         'categories': categories
     }
     return render(request, 'store/home.html', context)
+
+def detail(request, pk):
+    Item = get_object_or_404(Item, pk,pk)
+    related_items = Item.objects.filter(Category, is_sold=False).exclude(pk=pk)[0:3]
+
+    context={
+        "item": Item,
+        "related_items" : related_items
+    }
+
+    return render (request, "store/home.html", context)
