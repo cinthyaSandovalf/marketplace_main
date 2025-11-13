@@ -27,7 +27,9 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-
+LOGIN_URL = "/store/login/"
+LOGIN_REDIRECT_URL = "/" 
+LOGOUN_REDIRECT_URL = "/"
 # Application definition
 
 INSTALLED_APPS = [
