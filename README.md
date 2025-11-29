@@ -221,3 +221,222 @@ urlpatterns = [
     path('detail/<int:pk>/', detail, name='detail'),
 ]
 ```
+
+
+# Práctica Evaluatoria — Marketplace (Django)
+
+## Forms.py (LoginForm, SignupForm, NewItemForm)
+
+En las clases recientes se trabajó en el archivo `forms.py` de la aplicación store dentro del proyecto marketplace_main. Este archivo funciona como la frontera entre lo que el usuario escribe y lo que llega al sistema. Los formularios validan, organizan y moldean la información antes de procesarla.
+
+### Código: forms.py
+
+```python
+from django import forms
+from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+from .models import Item
+
+class LoginForm(AuthenticationForm):
+    username = forms.CharField(
+        widget=forms.TextInput(attrs={
+            "placeholder": "Nombre de usuario",
+            "class": "form-control"
+        })
+    )
+    password = forms.CharField(
+        widget=forms.PasswordInput(attrs={
+            "placeholder": "Contraseña",
+            "class": "form-control"
+        })
+    )
+
+class SignupForm(UserCreationForm):
+    username = forms.CharField(
+        widget=forms.TextInput(attrs={
+            "placeholder": "Nombre de usuario",
+            "class": "form-control"
+        })
+    )
+    email = forms.EmailField(
+        widget=forms.EmailInput(attrs={
+            "placeholder": "Correo electrónico",
+            "class": "form-control"
+        })
+    )
+    password1 = forms.CharField(
+        widget=forms.PasswordInput(attrs={
+            "placeholder": "Contraseña",
+            "class": "form-control"
+        })
+    )
+    password2 = forms.CharField(
+        widget=forms.PasswordInput(attrs={
+            "placeholder": "Repetir contraseña",
+            "class": "form-control"
+        })
+    )
+
+class NewItemForm(forms.ModelForm):
+    class Meta:
+        model = Item
+        fields = ("name", "description", "price", "category", "image")
+        widgets = {
+            "name": forms.TextInput(attrs={
+                "class": "form-control",
+                "placeholder": "Nombre del producto"
+            }),
+            "description": forms.Textarea(attrs={
+                "class": "form-control",
+                "placeholder": "Descripción"
+            }),
+            "price": forms.NumberInput(attrs={
+                "class": "form-control",
+                "placeholder": "Precio"
+            }),
+            "category": forms.Select(attrs={"class": "form-control"}),
+            "image": forms.FileInput(attrs={"class": "form-control"})
+        }
+```
+
+---
+
+## Views.py (login, logout_user, detail, add_item)
+
+Estas funciones controlan la lógica principal del sistema: iniciar sesión, cerrar sesión, mostrar detalles de productos y agregar nuevos artículos.
+
+### Código: views.py
+
+```python
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth import login, logout
+from django.contrib.auth.decorators import login_required
+from .forms import LoginForm, SignupForm, NewItemForm
+from .models import Item
+
+def login_view(request):
+    if request.method == "POST":
+        form = LoginForm(data=request.POST)
+        if form.is_valid():
+            user = form.get_user()
+            login(request, user)
+            return redirect("index")
+    else:
+        form = LoginForm()
+    return render(request, "login.html", {"form": form})
+
+def logout_user(request):
+    logout(request)
+    return redirect("login")
+
+def detail(request, pk):
+    item = get_object_or_404(Item, pk=pk)
+    return render(request, "item.html", {"item": item})
+
+@login_required
+def add_item(request):
+    if request.method == "POST":
+        form = NewItemForm(request.POST, request.FILES)
+        if form.is_valid():
+            item = form.save()
+            return redirect("detail", pk=item.pk)
+    else:
+        form = NewItemForm()
+    return render(request, "form.html", {"form": form})
+```
+
+---
+
+## Decorador @login_required
+
+Se usa para restringir vistas a usuarios autenticados. Si un usuario intenta entrar sin iniciar sesión, es redirigido automáticamente al login. Evita repetir validaciones manuales.
+
+---
+
+## urls.py (rutas del proyecto)
+
+Conecta cada acción con su vista correspondiente.
+
+### Código: urls.py
+
+```python
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path("login/", views.login_view, name="login"),
+    path("logout/", views.logout_user, name="logout"),
+    path("item/<int:pk>/", views.detail, name="detail"),
+    path("add-item/", views.add_item, name="add_item"),
+]
+```
+
+---
+
+## store/templates (item.html, login.html, signup.html, navigation.html, form.html)
+
+Plantillas que muestran la parte visual del sistema.
+
+### Código: item.html
+
+```html
+<h1>{{ item.name }}</h1>
+<p>Precio: {{ item.price }}</p>
+<p>{{ item.description }}</p>
+<img src="{{ item.image.url }}" alt="Imagen del producto">
+```
+
+---
+
+### Código: login.html
+
+```html
+<h2>Iniciar Sesión</h2>
+<form method="POST">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Entrar</button>
+</form>
+```
+
+---
+
+### Código: signup.html
+
+```html
+<h2>Crear Cuenta</h2>
+<form method="POST">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Registrarse</button>
+</form>
+```
+
+---
+
+### Código: navigation.html
+
+```html
+<nav>
+    <a href="/">Inicio</a>
+    {% if user.is_authenticated %}
+        <a href="/add-item/">Agregar artículo</a>
+        <a href="/logout/">Cerrar sesión</a>
+    {% else %}
+        <a href="/login/">Login</a>
+        <a href="/signup/">Registro</a>
+    {% endif %}
+</nav>
+```
+
+---
+
+### Código: form.html
+
+```html
+<h2>Formulario</h2>
+<form method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Guardar</button>
+</form>
+```
